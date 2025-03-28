@@ -26,7 +26,6 @@ library(here)
 library(tidyverse)
 library(palmerpenguins)
 library(patchwork)
-library(flair)
 library(glue)
 options(width = 100)
 
@@ -101,7 +100,7 @@ plant_gr <- read_csv("./datasets-master/plant.growth.rate.csv")
 growth_plot <- ggplot(data = plant_gr, aes(x =soil.moisture.content, y = plant.growth.rate)) +
   geom_point() +
   theme_bw() +
-  labs( y = "Plant Growth (mm/week)", x = bquote("Soil Moisture ("~cm^3/cm^3~")"))
+  labs(y = "Plant Growth (mm/week)", x = "Soil Moisture (g/g)")
 growth_plot
 ```
 
@@ -115,7 +114,7 @@ growth_plot
 ggplot(data = plant_gr, aes(x =soil.moisture.content, y = plant.growth.rate)) +
   geom_point() +
   theme_bw() +
-  labs( y = "Plant Growth (mm/week)", x = bquote("Soil Moisture ("~cm^3/cm^3~")"))
+  labs( y = "Plant Growth (mm/week)", x = "Soil Moisture (g/g)")
 ```
 
 
@@ -165,7 +164,7 @@ plant_gr <- read_csv("./datasets-master/plant.growth.rate.csv")
 ggplot(data = plant_gr, aes(x =soil.moisture.content, y = plant.growth.rate)) +
   geom_point() +
   theme_bw() +
-  labs( y = "Plant Growth (mm/week)", x = bquote("Soil Moisture ("~cm^3/cm^3~")"))
+  labs( y = "Plant Growth (mm/week)",  x = "Soil Moisture (g/g)")
 ```
 :::
 
@@ -212,7 +211,7 @@ lm(plant.growth.rate ~ soil.moisture.content, data = plant_gr)
 3. Evaluate leverage (influential data points) - technically not an assumption
 
 ## What are residuals?
-- Residuals are difference between the observed value of the dependent variable (y) and the value predicted by the model
+- Residuals are difference between the observed value of the dependent variable (y) and the value predicted by the model ($\hat{y}$)
     - A measure of how well the model fits the data
     
 ```{r}
@@ -233,7 +232,7 @@ ggplot(data = plant_gr_yhat, aes(x =soil.moisture.content, y = plant.growth.rate
   theme_bw()  +
   geom_segment(aes(x =soil.moisture.content, y = plant.growth.rate, yend = yhat), colour = "red") +
   geom_smooth(method =  "lm", se = FALSE, colour = "blue") +
-  labs( y = "Plant Growth (mm/week)", x = bquote("Soil Moisture ("~cm^3/cm^3~")"))
+  labs( y = "Plant Growth (mm/week)",  x = "Soil Moisture (g/g)")
 ```
 
 
@@ -349,7 +348,7 @@ autoplot(model_pgr, which = c(5), smooth.colour = NA,  ncol = 1)
 p1 <- ggplot(data = plant_gr, aes(x = soil.moisture.content, y = plant.growth.rate)) +
   geom_point() +
   theme_bw() +
-  labs( y = "Plant Growth (mm/week)", x = bquote("Soil Moisture ("~cm^3/cm^3~")")) +
+  labs( y = "Plant Growth (mm/week)",  x = "Soil Moisture (g/g)") +
   stat_smooth(method = "lm", se =FALSE, colour = "blue") +
   scale_y_continuous(limits = c(15,100))
 ```
@@ -361,7 +360,7 @@ plant_gr_extreme <- plant_gr |>
 p2<- ggplot(data = plant_gr_extreme, aes(x = soil.moisture.content, y = plant.growth.rate)) +
   geom_point() +
   theme_bw() +
-  labs( y = "Plant Growth (mm/week)", x = bquote("Soil Moisture ("~cm^3/cm^3~")")) +
+  labs( y = "Plant Growth (mm/week)", x = "Soil Moisture (g/g)") +
   stat_smooth(method = "lm", se =FALSE, colour = "blue") +
   scale_y_continuous(limits = c(15,100))
 ```
@@ -514,7 +513,7 @@ summary(model_pgr)
 **Slope:** 12.75
 
 - Significant 
-- For each 1 cm<sup>3</sup>/cm<sup>3</sup> increase in soil moisture, plant growth rate is predicted to increase by 12.75 mm/week 
+- For each 1 g/g increase in soil moisture, plant growth rate is predicted to increase by 12.75 mm/week 
 
 :::
 
@@ -587,7 +586,7 @@ summary(model_pgr)
 
 ## Back to the picture
 
-y = mx + b
+y = a + bx
 ```{r}
 #| echo: true
 #| eval: false
@@ -630,7 +629,7 @@ predict(model_pgr, newdata = new_data,
         interval = "confidence", level = 0.95)
 ```
 
-- A 95% confidence interval for plant growth rate at soil moisture content of 1 cm<sup>3</sup>/cm<sup>3</sup> would be 30.93 to 33.27 mm/week
+- A 95% confidence interval for plant growth rate at soil moisture content of 1 g/g would be 30.93 to 33.27 mm/week
 - This means we are 95% confident that the **mean plant growth rate** falls within this range
 
 ## Confidence interval
@@ -656,15 +655,28 @@ predict(model_pgr, newdata = new_data,
         interval = "predict", level = 0.95)
 ```
 
-- A 95% prediction interval for plant growth rate at soil moisture content of 1 cm<sup>3</sup>/cm<sup>3</sup> would be 23.93 to 40.26 mm/week
+- A 95% prediction interval for plant growth rate at soil moisture content of 1 g/g would be 23.93 to 40.26 mm/week
 - This means we are 95% confident that if we take a **random** plant at that moisture content it will fall within this range
 
 ## Prediction interval
 ```{r}
 #| echo: false
 #| eval: true
+new_data2 <- data.frame(soil.moisture.content = seq(min(plant_gr$soil.moisture.content), max(plant_gr$soil.moisture.content),  0.001))
+
+new_data3 <- data.frame(predict(model_pgr, newdata = new_data2, 
+        interval = "predict", level = 0.95), soil.moisture.content = seq(min(plant_gr$soil.moisture.content), max(plant_gr$soil.moisture.content), 0.001))
+        
+
+
+```
+
+```{r}
+#| echo: false
+#| eval: true
 growth_plot +
-  geom_smooth(method = "lm", se = TRUE) +
+  geom_smooth(method = "lm", se = FALSE) +
+  geom_ribbon(data = new_data3, aes(x = soil.moisture.content, ymin = lwr, ymax = upr), inherit.aes = FALSE,  fill = "black", alpha = 0.1) +
   geom_segment(x = 1, xend = 1, y = 23.9, yend = 40.26, colour = "purple")
 ```
 
@@ -786,7 +798,7 @@ Additionally
 -  Stats can be confusing at the best of times!
 -   Be kind to yourself
 -   It takes practice!
--   Your stats should support your figures (not the other way around
+-   Your stats should support your figures (not the other way around)
 :::
 :::{.fragment}
 
