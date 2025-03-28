@@ -36,6 +36,8 @@ knitr::opts_chunk$set(dpi = 150, fig.width = 8, out.width = "90%",
 
 ## You are not alone!
 
+![[Alison Horst](https://allisonhorst.com/)](figs/r_help.png)
+
 ## Getting started
 
 1. Create and name a new folder
@@ -119,10 +121,19 @@ ggplot(data = plant_gr, aes(x =soil.moisture.content, y = plant.growth.rate)) +
 
 ##  Hypothesis into a statistical model
 ### Hypothesis is that more moisture allows for higher growth rates
+
+::: columns
+::: {.column width="60%"}
 - Need to identify
   - Response (dependent, y) variable
   - Explanatory (independent, x) variable
   - Continuous or discreet/categorical
+:::
+
+::: {.column width="40%"}
+![[Allison Horst](https://allisonhorst.com/)](figs/data_types)
+:::
+:::  
   
 ##  Hypothesis into a statistical model
 
