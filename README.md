@@ -12,8 +12,8 @@ This GitHub repository holds all the information relating to our workshop.
 
 ### Workshop Resources
 - Slides 
-  - [html](https://alexkoiter.ca/linear_regression /) (best)
-  - [pdf](https://alexkoiter.ca/workshop-figures-in-r/linear_regression.pdf)
+  - [html](https://alexkoiter.ca/linear_regression/) (best)
+  - [pdf](https://alexkoiter.ca/linear_regression/linear_regression.pdf)
   
 ### Before the workshop
 - [Install R](https://muug.ca/mirror/cran/) 
