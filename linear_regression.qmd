@@ -1,0 +1,800 @@
+---
+format: 
+  revealjs:
+    author-alex: true
+    title: Intro to Stats in R
+    subtitle: Linear Regression
+    workshop: "38:265 Applied Quantitative Methods in Geography - 2025"
+    theme: [default, styles.scss]
+    date: today
+    date-format: iso
+    width: 1200
+    slide-number: true
+    embed-resources: true
+    title-slide-attributes: 
+      data-background-image: figs/r_learners.png
+      data-background-size: "50%"
+      data-background-position: "85% 80%"
+    template-partials:
+      - title-slide.html
+editor: source
+filters:
+  - output-line-highlight.lua
+---
+```{r setup, include = FALSE, cache=FALSE}
+library(here)
+library(tidyverse)
+library(palmerpenguins)
+library(patchwork)
+library(flair)
+library(glue)
+options(width = 100)
+
+knitr::opts_chunk$set(dpi = 150, fig.width = 8, out.width = "90%",
+                      fig.align = "center", fig.asp = 0.45)
+```
+
+## You are not alone!
+
+## Getting started
+
+1. Create and name a new folder
+2. Open RStudio
+3. Create R project
+
+    - File -> New project -> Existing Directory
+    - Browse to your folder
+    - Select Create Project
+4. Create new R script
+
+    - File -> New File -> R Script
+  
+## Getting started
+### Make sure to load packages at the top:
+
+```{r}
+#| echo: true
+library(tidyverse)
+library(palmerpenguins)
+```
+
+## Getting started
+### We need one additional package:
+`ggfortify` provides plotting tools for commonly used statistics 
+```{r}
+#| echo: true
+#| eval: false
+install.packages("ggfortify")
+```
+Add it to the top with the others
+```{r}
+#| echo: true
+library(tidyverse)
+library(palmerpenguins)
+library(ggfortify)
+```
+
+## Getting started with stats in R
+### 1. Always start with a picture!
+- Stats should support your figures
+- Do you see the expected pattern?
+
+### 2. Translate your hypothesis into a statistical model
+- Becomes easier with experience
+
+### 3. Translate your statistical model in R language
+- Assess assumptions first!
+- Then interpret results
+
+
+## Picture
+- You are all familiar with how to use `ggplot2` to create a figure
+  - Go back to your previous scripts and notes
+
+```{r}
+#| echo: false
+#| eval: true
+plant_gr <- read_csv("./datasets-master/plant.growth.rate.csv")
+
+growth_plot <- ggplot(data = plant_gr, aes(x =soil.moisture.content, y = plant.growth.rate)) +
+  geom_point() +
+  theme_bw() +
+  labs( y = "Plant Growth (mm/week)", x = bquote("Soil Moisture ("~cm^3/cm^3~")"))
+growth_plot
+```
+
+## Picture
+- We see a positive relationship (slope)
+  - More soil moisture results in higher plant growth (as expected)
+
+```{r}
+#| echo: false
+#| eval: true
+ggplot(data = plant_gr, aes(x =soil.moisture.content, y = plant.growth.rate)) +
+  geom_point() +
+  theme_bw() +
+  labs( y = "Plant Growth (mm/week)", x = bquote("Soil Moisture ("~cm^3/cm^3~")"))
+```
+
+
+##  Hypothesis into a statistical model
+### Hypothesis is that more moisture allows for higher growth rates
+- Need to identify
+  - Response (dependent, y) variable
+  - Explanatory (independent, x) variable
+  - Continuous or discreet/categorical
+  
+##  Hypothesis into a statistical model
+
+When both x and y are continuous we have a simple linear regression
+
+::: {.column width="40%"}
+
+Response variable (y) 
+
+- Plant growth 
+- Continuous
+
+Explanatory variable (x)
+
+- Soil Moisture
+- Continuous
+
+:::
+::: {.column width="60%"}
+```{r}
+#| echo: false
+#| eval: true
+#| fig-out: 100%
+#| fig-asp: 0.7
+#| fig-width: 5
+
+plant_gr <- read_csv("./datasets-master/plant.growth.rate.csv")
+
+ggplot(data = plant_gr, aes(x =soil.moisture.content, y = plant.growth.rate)) +
+  geom_point() +
+  theme_bw() +
+  labs( y = "Plant Growth (mm/week)", x = bquote("Soil Moisture ("~cm^3/cm^3~")"))
+```
+:::
+
+
+
+## Linear regression
+### Running model in R
+```{r} 
+#| echo: true
+#| eval: false
+
+lm(y ~ x, data = data)
+```
+
+- **y** is the **response** variable (**dependent**)
+- **x** is the **explanatory** variable (**independent**, **predictor**)
+
+## Linear regression
+### Running models in R
+```{r} 
+#| echo: true
+#| eval: false
+
+lm(y ~ x1 + x2 + ..., data = data)
+```
+
+- You can have multiple explanatory variables
+- Can be all continuous, all discreet, or a mix
+  - [But these are often called: ANOVA, ANCOVA, Multiple regression, etc.]{.small}
+
+
+## Linear regression
+### Running models in R
+```{r}
+#| echo: true
+#| eval: false
+lm(plant.growth.rate ~ soil.moisture.content, data = plant_gr)
+```
+- This reads as: Fit a linear model, where we hypothesize that plant growth rate is a function of of soil moisture content, using data from the the `plant_gr` data frame.
+
+## Assumptions first!
+1. Assumption of equal variance
+2. Assumption of normality of residuals
+3. Evaluate leverage (influential data points) - technically not an assumption
+
+## What are residuals?
+- Residuals are difference between the observed value of the dependent variable (y) and the value predicted by the model
+    - A measure of how well the model fits the data
+    
+```{r}
+#| echo: false
+#| eval: true
+model_pgr <- lm(plant.growth.rate ~ soil.moisture.content, 
+                data = plant_gr)
+
+plant_gr_yhat <- plant_gr |>
+  mutate(yhat = model_pgr$fitted.values)
+```
+
+```{r}
+#| echo: false
+#| eval: true
+ggplot(data = plant_gr_yhat, aes(x =soil.moisture.content, y = plant.growth.rate)) +
+  geom_point() +
+  theme_bw()  +
+  geom_segment(aes(x =soil.moisture.content, y = plant.growth.rate, yend = yhat), colour = "red") +
+  geom_smooth(method =  "lm", se = FALSE, colour = "blue") +
+  labs( y = "Plant Growth (mm/week)", x = bquote("Soil Moisture ("~cm^3/cm^3~")"))
+```
+
+
+## Assumptions first!
+```{r}
+#| echo: true
+#| eval: true
+model_pgr <- lm(plant.growth.rate ~ soil.moisture.content, 
+                data = plant_gr)
+```
+
+```{r}
+#| echo: true
+#| eval: false
+autoplot(model_pgr, smooth.colour = NA)
+```
+- The `autoplot()` function is part of the `ggfortify` package
+- The `smooth.colour = NA` argument suppresses the "wiggly" line that is a locally weighted regression line. 
+    - Some argue the line can be unhelpful as one tends to look at the line and not the data
+
+## Assumptions first!
+```{r}
+#| echo: true
+#| eval: true
+autoplot(model_pgr, smooth.colour = NA)
+```
+
+
+## Equal variance
+### Homoscedasticity
+- The spread of residuals does not systematically increase or decrease as the predictor values change
+```{r}
+#| echo: false
+#| eval: true
+autoplot(model_pgr, which = c(1,3), smooth.colour = NA)
+```
+
+## Unequal variance
+### Heteroscedasticity
+
+```{r}
+#| echo: false
+#| eval: true
+model_pgr2 <- lm(plant.growth.rate^5 ~ soil.moisture.content, 
+                data = plant_gr)
+autoplot(model_pgr2, which = c(1,3), smooth.colour = NA)
+```
+
+## Normal distribution of residuals
+- Assess the distribution of residuals - looking for a normal distribution
+    - Ensures the validity of conclusions made
+```{r}
+#| eval: true
+#| echo: false
+autoplot(model_pgr, which = c(2), smooth.colour = NA,  ncol = 1)
+```
+
+## Normal distribution of residuals
+- Q-Q plots are a better tool when you have a sample size < 100
+```{r}
+d <- data.frame(residuals = residuals(model_pgr),    
+                std_residuals = rstudent(model_pgr), 
+                fitted = fitted(model_pgr),          
+                cooks = cooks.distance(model_pgr))   
+
+d <- mutate(d, obs = 1:n())
+
+ggplot(data = d, aes(x = std_residuals)) +
+  geom_histogram(bins = 10) +
+  theme_bw()
+
+```
+
+
+## Non-normal distribution
+
+```{r}
+#| eval: true
+#| echo: false
+model_pgr2 <- lm(plant.growth.rate^5 ~ soil.moisture.content, 
+                data = plant_gr)
+autoplot(model_pgr2, which = c(2), smooth.colour = NA,  ncol = 1) 
+```
+
+## Leverage
+:::: {.columns}
+
+::: {.column width="50%"}
+### Be **very** careful here!
+- Data points whose response variable (y) does not follow the general trend
+    - Can skew results
+- Do not throw out data because you don't like it!
+- Outlier, or meaningful aspect of your data?
+
+:::
+
+::: {.column width="50%"}
+```{r}
+#| eval: true
+#| echo: false
+#| fig-out: 100%
+#| fig-asp: 1
+#| fig-width: 4
+
+autoplot(model_pgr, which = c(5), smooth.colour = NA,  ncol = 1)
+```
+:::
+
+::::
+
+##  Leverage
+```{r}
+p1 <- ggplot(data = plant_gr, aes(x = soil.moisture.content, y = plant.growth.rate)) +
+  geom_point() +
+  theme_bw() +
+  labs( y = "Plant Growth (mm/week)", x = bquote("Soil Moisture ("~cm^3/cm^3~")")) +
+  stat_smooth(method = "lm", se =FALSE, colour = "blue") +
+  scale_y_continuous(limits = c(15,100))
+```
+
+```{r}
+plant_gr_extreme <- plant_gr |>
+  add_row(soil.moisture.content = 2, plant.growth.rate = 100)
+
+p2<- ggplot(data = plant_gr_extreme, aes(x = soil.moisture.content, y = plant.growth.rate)) +
+  geom_point() +
+  theme_bw() +
+  labs( y = "Plant Growth (mm/week)", x = bquote("Soil Moisture ("~cm^3/cm^3~")")) +
+  stat_smooth(method = "lm", se =FALSE, colour = "blue") +
+  scale_y_continuous(limits = c(15,100))
+```
+
+```{r}
+p1+p2
+```
+
+## Model assumptions
+
+### You can use formal tests for assumptions
+[(e.g., Bartlett, Levene, Shapiro-Wilk, Kolmogorov-Smirnov, Anderson-Darling...)]{.small}
+
+:::{.spacer}
+:::
+
+I generally recommend **NOT** doing this
+
+- Small meaningless differences may lead to rejection
+- Just look at your data!
+
+
+## Model interpertation
+### Everything is looking good!
+- Lets see if we can reject the null hypothesis
+  - Soil moisture has no effect on plant growth rate
+- We are going to use the `summary()` function to help us out
+
+## Model interpertation
+:::{.small}
+```{r}
+#| echo: true
+#| eval: true
+model_pgr <- lm(plant.growth.rate ~ soil.moisture.content, data = plant_gr)
+```
+:::
+
+:::: {.columns}
+
+::: {.column .fragment width="30%"}
+:::{.small}
+```{r}
+#| echo: true
+#| eval: false
+summary(model_pgr)
+```
+:::
+:::
+
+
+::: {.column .fragment width="70%"}
+:::{.small}
+```{r}
+#| echo: false
+#| eval: true
+summary(model_pgr)
+```
+:::
+:::
+::::
+
+## Model interpertation
+
+Model
+
+:::{.small}
+```{r}
+#| echo: false
+#| eval: true
+#| class-output: highlight
+#| output-line-numbers: "3"
+summary(model_pgr)
+```
+:::
+
+## Model interpertation
+
+Effects
+
+:::{.small}
+```{r}
+#| echo: false
+#| eval: true
+#| class-output: highlight
+#| output-line-numbers: "10-12"
+summary(model_pgr)
+```
+:::
+
+## Model interpertation
+:::: {.columns}
+
+::: {.column width="30%"}
+R<sup>2</sup> and adjusted R<sup>2</sup>
+
+- Adjusted for the number of parameters
+:::
+
+::: {.column width="70%" .small2}
+```{r}
+#| echo: false
+#| eval: true
+#| class-output: highlight
+#| output-line-numbers: "17"
+
+summary(model_pgr)
+```
+:::
+::::
+
+## Model interpertation
+:::: {.columns}
+
+::: {.column width="30%" .small}
+
+**Estimate**
+
+- Slope and Intercept
+
+**Std. Error**
+
+- Variability in the estimates
+
+**t value**
+
+- Test statistic
+
+**Pr(>|t|)**
+
+- P-value, significance of the results
+:::
+
+::: {.column width="70%" .small2}
+```{r}
+#| echo: false
+#| eval: true
+#| class-output: highlight
+#| output-line-numbers: "10-12"
+
+summary(model_pgr)
+```
+:::
+::::
+
+## Model interpertation
+:::: {.columns}
+
+::: {.column width="30%" .small}
+
+**Slope:** 12.75
+
+- Significant 
+- For each 1 cm<sup>3</sup>/cm<sup>3</sup> increase in soil moisture, plant growth rate is predicted to increase by 12.75 mm/week 
+
+:::
+
+::: {.column width="70%" .small2}
+```{r}
+#| echo: false
+#| eval: true
+#| class-output: highlight
+#| output-line-numbers: "12"
+
+summary(model_pgr)
+```
+:::
+::::
+
+## Model interpertation
+:::: {.columns}
+
+::: {.column width="30%" .small}
+
+**Slope:** 12.75
+
+**Intercept:** 19.35
+
+- Plants grown in completely dry soil are predicted to have a growth rate of 19.4 mm/week
+- The reality is that the plants would be dead!
+
+:::
+
+::: {.column width="70%" .small2}
+```{r}
+#| echo: false
+#| eval: true
+#| class-output: highlight
+#| output-line-numbers: "11"
+
+summary(model_pgr)
+```
+:::
+::::
+
+## Model interpertation
+:::: {.columns}
+
+::: {.column width="30%" .small}
+
+**Slope:** 12.75
+
+**Intercept:** 19.35
+
+**r<sup>2</sup>**: 0.76
+
+- Generally report the adjusted value
+  - Takes into account the number of parameters in your model
+- 76% of the variation in the plant growth rate data is explained by soil moisture
+
+:::
+
+::: {.column width="70%" .small2}
+```{r}
+#| echo: false
+#| eval: true
+#| class-output: highlight
+#| output-line-numbers: "17"
+
+summary(model_pgr)
+```
+:::
+::::
+
+## Back to the picture
+
+y = mx + b
+```{r}
+#| echo: true
+#| eval: false
+geom_smooth(method = "lm", se = FALSE)
+```
+
+```{r}
+#| echo: false
+#| eval: true
+growth_plot +
+  geom_smooth(method = "lm", se = FALSE) +
+  annotate("text", x=0.5, y=45, label= "y = 12.75x + 19.35")
+```
+
+## Back to the picture
+Confidence interval
+
+```{r}
+#| echo: true
+#| eval: false
+geom_smooth(method = "lm", se = TRUE)
+```
+
+```{r}
+#| echo: false
+#| eval: true
+growth_plot +
+  geom_smooth(method = "lm", se = TRUE) +
+  annotate("text", x=0.5, y=45, label= "y = 12.75x + 19.35")
+```
+
+## Confidence interval
+- The range in which the mean (expected value) of the response variable is likely to fall for a given explanatory variable value
+
+```{r}
+#| eval: true
+#| echo: true
+new_data <- data.frame(soil.moisture.content = 1)
+predict(model_pgr, newdata = new_data, 
+        interval = "confidence", level = 0.95)
+```
+
+- A 95% confidence interval for plant growth rate at soil moisture content of 1 cm<sup>3</sup>/cm<sup>3</sup> would be 30.93 to 33.27 mm/week
+- This means we are 95% confident that the **mean plant growth rate** falls within this range
+
+## Confidence interval
+- Double check
+```{r}
+#| echo: false
+#| eval: true
+growth_plot +
+  geom_smooth(method = "lm", se = TRUE) +
+  geom_segment(x = 1, xend = 1, y = 30.92568, yend = 33.27031, colour = "red")
+```
+
+
+
+## Prediction interval
+- The range in which an individual new observation is likely to fall for a given explanatory variable value
+
+```{r}
+#| eval: true
+#| echo: true
+new_data <- data.frame(soil.moisture.content = 1)
+predict(model_pgr, newdata = new_data, 
+        interval = "predict", level = 0.95)
+```
+
+- A 95% prediction interval for plant growth rate at soil moisture content of 1 cm<sup>3</sup>/cm<sup>3</sup> would be 23.93 to 40.26 mm/week
+- This means we are 95% confident that if we take a **random** plant at that moisture content it will fall within this range
+
+## Prediction interval
+```{r}
+#| echo: false
+#| eval: true
+growth_plot +
+  geom_smooth(method = "lm", se = TRUE) +
+  geom_segment(x = 1, xend = 1, y = 23.9, yend = 40.26, colour = "purple")
+```
+
+
+## Your turn!
+Does flipper length, bill depth, and bill length in penguins vary with body mass?
+
+Each student is going to do something slightly different!
+
+1. bill length (Adelie)
+2. bill depth  (Adelie)
+3. flipper length (Adelie)
+4. bill length (Gentoo)
+5. bill depth  (Gentoo)
+6. flipper length (Gentoo)
+
+## Your turn!
+We need to filter the data by penguin species
+
+```{r}
+#| eval: true
+#| echo: true
+adelie_data <- filter(penguins, species == "Adelie")
+```
+
+or
+
+```{r}
+#| eval: true
+#| echo: true
+gentoo_data <- filter(penguins, species == "Gentoo")
+```
+
+## Create your picture
+```{r}
+#| eval: false
+#| echo: true
+ggplot(data =  ____, aes(_____________________________________)) +
+  geom_____() +
+  theme_____() +
+  labs(y = ____, x = ____)
+```
+
+
+## Linear regression
+
+```{r}
+#| eval: false
+#| echo: true
+_______ <- lm(_______ ~ _______, data = _______)
+```
+
+## Assess your assumptions
+
+```{r}
+#| eval: false
+#| echo: true
+autoplot(_______, smooth.colour = _______)
+```
+
+## Model interpertation
+
+```{r}
+#| eval: false
+#| echo: true
+summary(_______)
+```
+
+## Final picture
+```{r}
+#| eval: false
+#| echo: true
+penguin_plot <- ggplot(data =  ____, aes(_____________________________________)) +
+  geom_____() +
+  theme_____() +
+  labs(y = ____, x = ____) +
+  ____(method = ____, se = ____)
+penguin_plot 
+```
+
+Struggling to get your desired colours or text size? Please ask!
+
+The plot preview may look different the the saved version.
+
+```{r}
+#| eval: false
+#| echo: true
+ggsave(filename = ____, plot = ____, height = ____, 
+       width = ____, units = "mm", dpi =600)
+```
+
+## Assignment
+### Complete the following and compile into a single well-formatted document
+- Include identifying information  (name, date, title, etc)
+- PDF format
+- Figures are numbered and have meaningful captions
+- Pay attention to spelling and grammar
+
+Additionally
+
+- Submit your R script file so I can reproduce your work! <br>(not the .Rproj file)
+
+## Assignment
+1. Create a figure showing the relationship showing the relationship between body weight and flipper length, bill depth, or bill length for either Adelie or Chinstrap penguins. Include the standard error (95% confidence interval) about the regression line
+2. Using the diagnostic plots for your linear regression model (do not include figure in the report), evaluate the assumptions of normality, equal variance, and influential points/outliers based on your output. Summarize any potential violations and their possible impact on the interpretation of the model
+
+## Assignment
+3. Determine the regression model (intercept and slope) and express the equation
+4. Determine the r<sup>2</sup> for the model
+5. Test the significance of the modeled relationship (i.e., slope) using an $\alpha$ of 0.05
+6. Discuss the model's effectiveness in explaining bill depth, length, or flipper length using the coefficient of determination and significance test results
+
+## Assignment
+7. Explain what your r<sup>2</sup> value indicates about the relationship between the independent and dependent variables in your model
+8. If the r<sup>2</sup> value is less than 100%, suggest another potential independent variables that could added (i.e., multiple regression) to improve the model
+
+## Wrapping up
+:::{.small}
+-  Stats can be confusing at the best of times!
+-   Be kind to yourself
+-   It takes practice!
+-   Your stats should support your figures (not the other way around
+:::
+:::{.fragment}
+
+**Thank you!**
+
+:::{.columns}
+
+:::{.column width="50%"}
+
+:::
+
+:::{.column width="50%"}
+[{{< fa globe >}} [alexkoiter.ca](https://alexkoiter.ca)]{.small}  
+[{{< fa envelope >}} <koitera@brandonu.ca>]{.small}   
+[Slides created with Quarto on `r Sys.Date()`]{.small}
+:::
+
+:::
+
+:::
+
+
